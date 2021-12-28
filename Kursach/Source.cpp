@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
 #define HEADER ("Курсовая работа\nТема: Алгоритм Форда - Беллмана.\nВыполнил: Шадрин Д.А.\n")
-#include <iostream>
+#include <iostream> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
@@ -9,11 +9,17 @@
 #include <conio.h>
 #include <Windows.h>
 #include <queue>
-#define inf 100000;
+#include <algorithm>
+#define inf 10000;
 
 using namespace std;
 
-int** Matrica, ** Vis, n, *PUTI;
+int** Matrica, ** Vis, n, puti[1000], e, x;
+
+struct Edges {
+	int v, u, w;
+};
+Edges edge[10000];
 
 int Razmer() {
 
@@ -26,33 +32,56 @@ int Razmer() {
 
 int* FordBellman(int start)
 {
-	int* puti = new int[n];
 	for (int i = 0; i < n; i++) {
 		puti[i] = inf;
 	}
 	puti[start] = 0;
-	
-	for (int i = 1; i < n - 1; i++) {
-		for (int j = 0; j < n/*возможная ошибка*/; j++)
-			if (puti[i] + Matrica[i][j] < puti[j])
-				puti[j] = puti[i] + Matrica[i][j];
+
+	for (int i = 0; i < n; i++) {
+		x = 0;
+		bool stop = false;
+		for (int j = 0; j < e; j++)
+			if (puti[edge[j].v] + edge[j].w < puti[edge[j].u]) {
+
+				puti[edge[j].u] =  puti[edge[j].v] + edge[j].w;
+				x = edge[j].u;
+				stop = true;
+
+			}
+		if (!stop) break;
 	}
+
+	if (x != 0) {
+		cout << " Ошибка, найден отрицательный цикл" << endl;
+	}
+	else {
+		cout << "Кратчайшие расстояния: " << endl;
+
+		for (int i = 0; i < n; i++) {
+
+			cout << puti[i] << " ";
+
+		}
+
+		cout << endl;
+	}
+	
 	return puti;
 }
 
 int** createMatrix() {
 
-	int** M = (int**)(malloc(n * sizeof(int*)));
-	for (int i = 0; i < n; i++)
-	{
-		M[i] = (int*)(malloc(n * sizeof(int)));
-		for (int j = 0; j < n; j++)
+		int** M = (int**)(malloc(n * sizeof(int*)));
+		for (int i = 0; i < n; i++)
 		{
-			M[i][j] = 0;
+			M[i] = (int*)(malloc(n * sizeof(int)));
+			for (int j = 0; j < n; j++)
+			{
+				M[i][j] = 0;
+			}
 		}
+		return M;
 	}
-	return M;
-}
 
 void printMatrica(int** Matrica)
 {
@@ -73,50 +102,37 @@ void printMatrica(int** Matrica)
 	}
 }
 
-void printPuti(int* Put) {
-
-	cout << "Кратчайшие расстояния: " << endl;
-
-	for (int i = 0; i < n; i++) {
-
-		cout << Put << " ";
-
-	}
-
-	cout << endl;
-
-}
-
 void EditMatrica()
 {
-	int i, j, d, c;
-	cout << "Введите номера смежных вершин и вес ребра между ними:\nДля завершения нажмите '-'\n";
-	cin >> c;
-	if (c == '-')
-	{
-		return;
+	cout << endl << endl << "Введите расстояния путей между вершинами:" << endl;
+	for (int row = 0; row < n; row++) {
+
+		for (int col = 0; col < n; col++) {
+			cout << endl << "[" << row + 1 << "] -> [" << col + 1 << "] = ";
+			cin >> Matrica[row][col];
+		}
 	}
-	else
-	{
-		cin >> i >> j >> d;
-		if (i > n || j > n)
-		{
-			cout << "Таких вершин в графе нет!\n";
-		}
-		else
-		{
-			Matrica[i][j] = d;
-		}
 		printMatrica(Matrica);
-		EditMatrica();
-	}
-	for (int i = 0; i < n; i++)
+	/*for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < n; j++)
 		{
 			if (Matrica[i][j] == 0 && i != j)
 			{
 				Matrica[i][j] = SHRT_MAX;
+			}
+		}
+	}*/
+	e = 0;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++)
+		{
+			if (Matrica[i][j] != 0)// передача значений в список ребер
+			{
+				edge[e].v = i;
+				edge[e].u = j;
+				edge[e].w = Matrica[i][j];
+				e++;
 			}
 		}
 	}
@@ -142,9 +158,22 @@ void EditVis()
 			}
 		}
 	}
+	e = 0;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++)
+		{
+			if (Matrica[i][j] != 0)// передача значений в список ребер
+			{
+				edge[e].v = i;
+				edge[e].u = j;
+				edge[e].w = Matrica[i][j];
+				e++;
+			}
+		}
+	}
 }
 
-void Save(int** Matrica, int** Vis)
+void Save(int** Matrica, int* puti, int start)
 {
 	FILE* G = fopen("Graph", "w");
 	fprintf(G, "Размерность матрицы: %d\n", n);
@@ -164,47 +193,78 @@ void Save(int** Matrica, int** Vis)
 		}
 		fprintf(G, "\n");
 	}
-	fprintf(G, "Матрица кратчайших путей:\n");
+	if (x != 0) {
+		
+		fprintf(G, "Найден отрицательный цикл");
+		fclose(G);
+		return;
+	}
+	else{
+		for (int i = 0; i < n; i++) {
+
+			if (puti[i] == 10000)
+				fprintf(G, "%d -> %d = Пути не существует\n", start, i );
+			else {
+				fprintf(G, "%d -> %d = %d\n", start, i , puti[i]);
+
+			}
+		}
+		fclose(G);
+	}
+	
+	FILE* Gg = fopen("GraphMatrix", "w");
+	fprintf(Gg, "%d\n", n);
 	for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < n; j++)
 		{
-			if (Vis[i][j] == SHRT_MAX)
+			if (Matrica[i][j] == SHRT_MAX)
 			{
-				fprintf(G, " %d ", NULL);
+				fprintf(Gg, "%d ", NULL);
 			}
 			else
 			{
-				fprintf(G, " %d ", Vis[i][j]);
+				fprintf(Gg, "%d ", Matrica[i][j]);
 			}
 		}
-		fprintf(G, "\n");
+		fprintf(Gg, "\n");
 	}
-	fclose(G);
+	fclose(Gg);
 }
 
 void Read()
 {
-	FILE* G;
+	FILE* Gg;
 	if (!fopen("Graph", "r"))
 	{
 		printf("Невозможно открыть файл!\n");
 		system("pause");
 		return;
 	}
-	G = fopen("Graph", "r");
-	fseek(G, 21, SEEK_SET);
-	fscanf(G, "%d", &n);
+	Gg = fopen("GraphMatrix", "r");
+	fscanf(Gg, "%d", &n);
 	Matrica = createMatrix();
-	fseek(G, 28, SEEK_CUR);
 	for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < n; j++)
 		{
-			fscanf(G, " %d ", &Matrica[i][j]);
+			fscanf(Gg, " %d ", &Matrica[i][j]);
 		}
 	}
-	fclose(G);
+	fclose(Gg);
+	e = 0;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++)
+		{
+			if (Matrica[i][j] != 0)// передача значений в список ребер
+			{
+				edge[e].v = i;
+				edge[e].u = j;
+				edge[e].w = Matrica[i][j];
+				e++;
+			}
+		}
+	}
 }
 
 void addVersh()
@@ -361,8 +421,7 @@ void menu()
 			int start;
 			cout << "Стартовая вершина >> " << " ";
 			cin >> start;
-			PUTI = FordBellman(start-1);
-			printPuti(PUTI);
+			FordBellman(start-1);
 			system("pause");
 			break;
 
@@ -370,7 +429,7 @@ void menu()
 
 			system("cls");
 			cout << "Результат сохранён в файл Graph." << endl;
-			Save(Matrica, Vis);
+			Save(Matrica, puti, start);
 			system("pause");
 			break;
 
@@ -399,11 +458,10 @@ int main() {
 
 	setlocale(LC_ALL, "rus");
 	srand(time(NULL));
-	printf(HEADER);
+	cout << HEADER;
 	system("pause");
 	menu();
 	system("pause");
 	return 0;
 
 }
-
